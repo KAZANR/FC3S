@@ -1,0 +1,86 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DeepRant",
+  "version": "1.1.9",
+  "identifier": "com.DeepRant.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DeepRant",
+        "width": 1280,
+        "height": 720,
+        "minWidth": 1280,
+        "maxWidth": 1280,
+        "minHeight": 720,
+        "maxHeight": 720,
+        "theme": "Light",
+        "visible": true,
+        "decorations": true
+      }
+    ]
+  },
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "targets": [
+      "app",
+      "dmg",
+      "msi"
+    ],
+    "macOS": {
+      "entitlements": "./entitlements.plist",
+      "dmg": {
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "height": 400,
+          "width": 660
+        }
+      },
+      "files": {},
+      "hardenedRuntime": true,
+      "minimumSystemVersion": "10.13",
+      "signingIdentity": "Developer ID Application: Shanghai Diyu Network Technology Co., Ltd (6UB6WM6VQR)"
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "wix": {
+        "language": [
+          "zh-CN"
+        ]
+      }
+    },
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEyRUQyRTlGMEZGRjZCNUQKUldSZGEvOFBueTd0RXB1eStiY2ovR1c0M2lIK0JzTXR0TW9nTjR1QXNsbU9VOGNndG12VHg5L3UK",
+      "endpoints": [
+        "https://github.com/liseami/DeepRant/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
