@@ -1,8 +1,10 @@
 use serde_json::{json, Value};
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_store::StoreExt;
 
-const STORE_FILENAME: &str = "store.json";
+const SETTINGS_FILENAME: &str = "settings.json";
+const SCENES_FILENAME: &str = "scenes.json";
 
 // 添加模型配置结构体
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -10,6 +12,15 @@ pub struct ModelConfig {
     pub auth: String,
     pub api_url: String,
     pub model_name: String,
+}
+
+// 游戏场景结构体
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GameScene {
+    pub id: String,
+    pub name: String,
+    pub prompt: String,
+    pub is_builtin: bool,
 }
 
 // 添加常用语结构体
@@ -44,12 +55,16 @@ impl HotkeyConfig {
     }
 }
 
-// 应用设置结构体
+// 应用设置结构体（存储在 settings.json）
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct AppSettings {
     pub trans_hotkey: HotkeyConfig,
     pub translation_from: String,
     pub translation_to: String,
+    #[serde(default = "default_active_scene")]
+    pub active_scene: String,
+    // 保留旧字段兼容已有存储数据
+    #[serde(default)]
     pub game_scene: String,
     pub translation_mode: String,
     pub daily_mode: bool,
@@ -58,13 +73,107 @@ pub struct AppSettings {
     pub phrases: Vec<Phrase>,
 }
 
+// 场景数据结构（存储在 scenes.json）
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ScenesData {
+    pub scenes: Vec<GameScene>,
+}
+
+fn default_active_scene() -> String {
+    "dota2".to_string()
+}
+
+// 构建内置游戏场景列表
+fn build_builtin_scenes() -> Vec<GameScene> {
+    vec![
+        GameScene {
+            id: "lol".to_string(),
+            name: "英雄联盟".to_string(),
+            prompt: "英雄联盟游戏环境\n保留技能和装备简称\n使用赛事解说术语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "dota2".to_string(),
+            name: "Dota 2".to_string(),
+            prompt: "环境: DOTA2\n英雄简称（如ES=撼地神牛）\n物品缩写（如BKB）\n使用赛事解说术语\n保持团战节奏感".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "csgo".to_string(),
+            name: "CS:GO".to_string(),
+            prompt: "CS:GO游戏环境\n保留武器和位置代号\n使用标准战术用语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "pubg".to_string(),
+            name: "PUBG".to_string(),
+            prompt: "PUBG游戏环境\n保留武器和载具名称\n使用战术报点用语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "apex".to_string(),
+            name: "Apex Legends".to_string(),
+            prompt: "Apex Legends游戏环境\n保留传奇和技能名称\n使用战术简语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "overwatch".to_string(),
+            name: "守望先锋".to_string(),
+            prompt: "守望先锋游戏环境\n保留英雄和技能名称\n使用团队配合用语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "valorant".to_string(),
+            name: "Valorant".to_string(),
+            prompt: "Valorant游戏环境\n保留特工和技能名称\n使用FPS战术报点用语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "fortnite".to_string(),
+            name: "Fortnite".to_string(),
+            prompt: "Fortnite游戏环境\n保留武器和建筑术语\n使用战术简语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "minecraft".to_string(),
+            name: "Minecraft".to_string(),
+            prompt: "Minecraft游戏环境\n保留方块和物品名称\n使用社区常用表达".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "warzone".to_string(),
+            name: "Warzone".to_string(),
+            prompt: "Warzone游戏环境\n保留武器和装备名称\n使用战术报点用语".to_string(),
+            is_builtin: true,
+        },
+        GameScene {
+            id: "wow".to_string(),
+            name: "魔兽世界".to_string(),
+            prompt: "魔兽世界游戏环境\n保留职业、技能和副本术语\n使用MMO社区常用表达".to_string(),
+            is_builtin: true,
+        },
+    ]
+}
+
 // 初始化默认设置
 pub fn initialize_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
-    let store = app.store(STORE_FILENAME)?;
+    let settings_store = app.store(SETTINGS_FILENAME)?;
+    let scenes_store = app.store(SCENES_FILENAME)?;
 
-    // 检查settings是否已存在
-    if store.get("settings").is_some() {
-        store.close_resource();
+    let has_settings = settings_store.get("settings").is_some();
+    let has_scenes = scenes_store.get("scenes").is_some();
+
+    // --- 初始化 scenes.json ---
+    if !has_scenes {
+        let scenes = build_builtin_scenes();
+        scenes_store.set("scenes", json!(scenes));
+        let _ = scenes_store.save();
+    }
+    scenes_store.close_resource();
+
+    // --- 初始化 settings.json ---
+    if has_settings {
+        settings_store.close_resource();
         return Ok(());
     }
 
@@ -84,7 +193,6 @@ pub fn initialize_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
             8 => "经系统检测：玩家XXXXXX存在代练或共享账号嫌疑，遵守社区游戏规范，再次违反将进行封禁处理。",
             _ => unreachable!(),
         };
-        
         Phrase {
             id,
             phrase: phrase.to_string(),
@@ -96,10 +204,11 @@ pub fn initialize_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
         "trans_hotkey": trans_hotkey,
         "translation_from": "zh",
         "translation_to": "en",
+        "active_scene": "dota2",
         "game_scene": "dota2",
         "translation_mode": "toxic",
         "daily_mode": false,
-        "model_type": "deepseek",
+        "model_type": "custom",
         "custom_model": {
             "auth": "",
             "api_url": "https://api.openai.com/v1/chat/completions",
@@ -108,21 +217,37 @@ pub fn initialize_settings(app: &AppHandle) -> Result<(), anyhow::Error> {
         "phrases": phrases
     });
 
-    store.set("settings", default_settings);
-    let _ = store.save();
-    store.close_resource();
+    settings_store.set("settings", default_settings);
+    let _ = settings_store.save();
+    settings_store.close_resource();
 
     Ok(())
 }
 
 // 获取设置
 pub fn get_settings(app: &AppHandle) -> Result<AppSettings, anyhow::Error> {
-    let store = app.store(STORE_FILENAME)?;
+    let store = app.store(SETTINGS_FILENAME)?;
     let settings: Value = store
         .get("settings")
-        .expect("Failed to get value from store");
-
+        .expect("Failed to get value from settings store");
     Ok(serde_json::from_value(settings)?)
+}
+
+// 获取场景列表
+pub fn get_scenes(app: &AppHandle) -> Result<Vec<GameScene>, anyhow::Error> {
+    let store = app.store(SCENES_FILENAME)?;
+    let scenes: Value = store
+        .get("scenes")
+        .unwrap_or(json!(build_builtin_scenes()));
+    Ok(serde_json::from_value(scenes)?)
+}
+
+// 更新场景列表
+pub fn save_scenes(app: &AppHandle, scenes: Vec<GameScene>) -> Result<(), anyhow::Error> {
+    let store = app.store(SCENES_FILENAME)?;
+    store.set("scenes", json!(scenes));
+    store.save()?;
+    Ok(())
 }
 
 // 更新设置中的特定字段
@@ -130,7 +255,7 @@ pub fn update_settings_field<T: serde::Serialize>(
     app: &AppHandle,
     field_updater: impl FnOnce(&mut AppSettings) -> T,
 ) -> Result<T, anyhow::Error> {
-    let store = app.store(STORE_FILENAME)?;
+    let store = app.store(SETTINGS_FILENAME)?;
     let mut settings = get_settings(app)?;
 
     // 更新字段
@@ -143,62 +268,8 @@ pub fn update_settings_field<T: serde::Serialize>(
     Ok(result)
 }
 
-// 新增：添加/更新常用语
-pub fn update_phrase(app: &AppHandle, phrase: Phrase) -> Result<(), anyhow::Error> {
-    update_settings_field(app, |settings| {
-        if let Some(idx) = settings.phrases.iter().position(|p| p.id == phrase.id) {
-            settings.phrases[idx] = phrase;
-        } else {
-            settings.phrases.push(phrase);
-        }
-    })?;
-    // 重新注册快捷键
-    crate::shortcut::init_shortcuts(app)?;
-    Ok(())
-}
-
-// 新增：删除常用语
-pub fn delete_phrase(app: &AppHandle, phrase_id: i32) -> Result<(), anyhow::Error> {
-    update_settings_field(app, |settings| {
-        settings.phrases.retain(|p| p.id != phrase_id);
-    })?;
-    crate::shortcut::init_shortcuts(app)?;
-    Ok(())
-}
-
-// 新增：获取下一个可用的 phrase ID
-pub fn get_next_phrase_id(app: &AppHandle) -> Result<i32, anyhow::Error> {
-    let settings = get_settings(app)?;
-    let max_id = settings.phrases.iter().map(|p| p.id).max().unwrap_or(0);
-    Ok(max_id + 1)
-}
-
-// 新增：更新自定义游戏场景列表
-pub fn update_custom_scenes(app: &AppHandle, scenes: Vec<(String, String)>) -> Result<(), anyhow::Error> {
-    // 存储自定义场景到单独的键
-    let store = app.store(STORE_FILENAME)?;
-    store.set("custom_scenes", json!(scenes));
-    store.save()?;
-    Ok(())
-}
-
-// 新增：获取自定义游戏场景
-pub fn get_custom_scenes(app: &AppHandle) -> Result<Vec<(String, String)>, anyhow::Error> {
-    let store = app.store(STORE_FILENAME)?;
-    let scenes: Vec<(String, String)> = store
-        .get("custom_scenes")
-        .map(|v| serde_json::from_value(v).unwrap_or_default())
-        .unwrap_or_default();
-    Ok(scenes)
-}
-
-// 新增：更新短语快捷键
-pub fn update_phrase_hotkey(app: &AppHandle, phrase_id: i32, hotkey: HotkeyConfig) -> Result<(), anyhow::Error> {
-    update_settings_field(app, |settings| {
-        if let Some(idx) = settings.phrases.iter().position(|p| p.id == phrase_id) {
-            settings.phrases[idx].hotkey = hotkey;
-        }
-    })?;
-    crate::shortcut::init_shortcuts(app)?;
-    Ok(())
+// 获取配置文件目录路径
+pub fn get_config_dir(app: &AppHandle) -> Result<std::path::PathBuf, anyhow::Error> {
+    let path = app.path().app_data_dir()?;
+    Ok(path)
 }

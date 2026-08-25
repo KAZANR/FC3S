@@ -16,7 +16,6 @@ const sidebarItems = [
   { name: '模式', icon: Translate, id: 'translate' },
   { name: '常用语', icon: InfoCircle, id: 'phrases' },
   { name: 'AI模型', icon: Settings02, id: 'settings' },
-  { name: '关于', icon: InfoCircle, id: 'about' },
 ];
 
 export default function Sidebar({ activeItem, setActiveItem }) {

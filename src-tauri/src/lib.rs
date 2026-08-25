@@ -1,4 +1,4 @@
-use crate::store::{initialize_settings, update_phrase, delete_phrase, get_next_phrase_id, update_custom_scenes, get_custom_scenes, update_phrase_hotkey, Phrase, HotkeyConfig};
+use crate::store::{initialize_settings, get_settings as store_get_settings, get_scenes as store_get_scenes, save_scenes as store_save_scenes};
 use tauri::Manager;
 pub mod ai_translator;
 pub mod shell_helper;
@@ -31,37 +31,17 @@ async fn update_translator_shortcut(
 
 #[tauri::command]
 async fn get_settings(app_handle: tauri::AppHandle) -> Result<store::AppSettings, String> {
-    store::get_settings(&app_handle).map_err(|e| e.to_string())
+    store_get_settings(&app_handle).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn add_or_update_phrase(app_handle: tauri::AppHandle, phrase: Phrase) -> Result<(), String> {
-    update_phrase(&app_handle, phrase).map_err(|e| e.to_string())
+async fn get_scenes(app_handle: tauri::AppHandle) -> Result<Vec<store::GameScene>, String> {
+    store_get_scenes(&app_handle).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn delete_phrase(app_handle: tauri::AppHandle, phrase_id: i32) -> Result<(), String> {
-    delete_phrase(&app_handle, phrase_id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_next_phrase_id(app_handle: tauri::AppHandle) -> Result<i32, String> {
-    get_next_phrase_id(&app_handle).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn update_custom_scenes(app_handle: tauri::AppHandle, scenes: Vec<(String, String)>) -> Result<(), String> {
-    update_custom_scenes(&app_handle, scenes).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_custom_scenes(app_handle: tauri::AppHandle) -> Result<Vec<(String, String)>, String> {
-    get_custom_scenes(&app_handle).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn update_phrase_hotkey(app_handle: tauri::AppHandle, phrase_id: i32, hotkey: HotkeyConfig) -> Result<(), String> {
-    update_phrase_hotkey(&app_handle, phrase_id, hotkey).map_err(|e| e.to_string())
+async fn save_scenes(app_handle: tauri::AppHandle, scenes: Vec<store::GameScene>) -> Result<(), String> {
+    store_save_scenes(&app_handle, scenes).map_err(|e| e.to_string())
 }
 
 pub fn run() {
@@ -105,12 +85,8 @@ pub fn run() {
             log_to_backend,
             get_settings,
             get_version,
-            add_or_update_phrase,
-            delete_phrase,
-            get_next_phrase_id,
-            update_custom_scenes,
-            get_custom_scenes,
-            update_phrase_hotkey
+            get_scenes,
+            save_scenes
         ]);
 
     // 只在非Windows系统上添加窗口事件监听

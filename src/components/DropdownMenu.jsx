@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckTick, Plus } from '../icons';
+import { CheckTick } from '../icons';
 import { twMerge } from 'tailwind-merge';
 
 export default function DropdownMenu({
@@ -11,8 +11,7 @@ export default function DropdownMenu({
     anchorPosition = 'left-0',
     className = '',
     renderOption,
-    customOptions = [],
-    onCustomClick
+    customOptions = []
 }) {
     return show && (
         <>
@@ -74,16 +73,6 @@ export default function DropdownMenu({
                             );
                         })}
                     </>
-                )}
-
-                {onCustomClick && (
-                    <button
-                        onClick={onCustomClick}
-                        className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 text-[14px] text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors mt-1"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span>添加自定义场景</span>
-                    </button>
                 )}
             </motion.div>
         </>

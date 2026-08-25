@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use tauri::AppHandle;
 
-fn get_system_prompt(from: &str, to: &str, scene: &str, mode: &str, daily_mode: bool) -> String {
+fn get_system_prompt(from: &str, to: &str, scene_prompt: &str, mode: &str, daily_mode: bool, active_scene_id: &str) -> String {
     if daily_mode {
         return format!(
             r#"<task>将用户输入从【{}】翻译到【{}】</task>
@@ -84,65 +84,58 @@ fn get_system_prompt(from: &str, to: &str, scene: &str, mode: &str, daily_mode: 
 • 去除冗余修饰词
 </rhythm>"#
         }
-        "auto" => match scene {
-            "dota2" | "lol" => {
-                r#"<moba_style>
+        "auto" => {
+            // 根据场景ID推断类型
+            let scene_type = if active_scene_id.contains("dota") || active_scene_id.contains("lol") {
+                "moba"
+            } else if active_scene_id.contains("csgo") || active_scene_id.contains("valorant") || active_scene_id.contains("pubg") || active_scene_id.contains("apex") || active_scene_id.contains("warzone") {
+                "fps"
+            } else {
+                "general"
+            };
+            
+            match scene_type {
+                "moba" => {
+                    r#"<moba_style>
 • 保留英文技能和装备缩写
 • 使用MOBA游戏特有黑话
 • 转换为选手间的简短指令
 • 保持游戏中的交流节奏
 </moba_style>"#
-            }
-            "csgo" => {
-                r#"<fps_style>
+                }
+                "fps" => {
+                    r#"<fps_style>
 • 使用FPS战术简称(A1、B2等)
 • 转换为标准报点格式
 • 保留英文武器代号
 • 使用经济术语(eco、force等)
 </fps_style>"#
-            }
-            _ => {
-                r#"<general_style>
+                }
+                _ => {
+                    r#"<general_style>
 • 识别并保留游戏术语
 • 转换为玩家间常用表达
 • 保持游戏交流的简洁性
 </general_style>"#
+                }
             }
-        },
+        }
         _ => "",
     };
 
-    let scene_desc = match scene {
-        "dota2" => {
-            r#"<context>
-• 环境: DOTA2
-• 英雄简称（如ES=撼地神牛）
-• 物品缩写（如BKB）
-• 使用赛事解说术语
-• 保持团战节奏感
-</context>"#
-        }
-        "lol" => {
-            r#"<context>
-• 英雄联盟游戏环境
-• 保留技能和装备简称
-• 使用赛事解说术语
-</context>"#
-        }
-        "csgo" => {
-            r#"<context>
-• CS:GO游戏环境
-• 保留武器和位置代号
-• 使用标准战术用语
-</context>"#
-        }
-        _ => {
-            r#"<context>
+    let scene_desc = if scene_prompt.is_empty() {
+        String::from(r#"<context>
 • 通用游戏环境
 • 识别常见游戏用语
 • 保持游戏交流特点
-</context>"#
-        }
+</context>"#)
+    } else {
+        format!(
+            r#"<context>
+{}
+</context>"#,
+            scene_prompt
+        )
     };
 
     format!(
@@ -188,10 +181,17 @@ fn get_model_config(settings: &crate::store::AppSettings) -> crate::store::Model
 
 pub async fn translate_with_gpt(app: &AppHandle, original: &str) -> Result<String> {
     let settings = crate::store::get_settings(app)?;
+    let scenes = crate::store::get_scenes(app).unwrap_or_default();
+    
+    let active_scene_id = settings.active_scene.as_str();
+    let scene = scenes.iter().find(|s| s.id == active_scene_id);
+    let scene_prompt = scene.map(|s| s.prompt.as_str()).unwrap_or("");
+
     println!("当前翻译设置:");
     println!("- 源语言: {}", settings.translation_from);
     println!("- 目标语言: {}", settings.translation_to);
-    println!("- 游戏场景: {}", settings.game_scene);
+    println!("- 游戏场景: {}", active_scene_id);
+    println!("- 场景Prompt: {}", scene_prompt);
     println!("- 翻译模式: {}", settings.translation_mode);
     println!("- 日常模式: {}", settings.daily_mode);
     println!("- 模型类型: {}", settings.model_type);
@@ -205,9 +205,10 @@ pub async fn translate_with_gpt(app: &AppHandle, original: &str) -> Result<Strin
     let system_prompt = get_system_prompt(
         &settings.translation_from,
         &settings.translation_to,
-        &settings.game_scene,
+        scene_prompt,
         &settings.translation_mode,
         settings.daily_mode,
+        active_scene_id,
     );
 
     let client = Client::builder()
@@ -244,12 +245,10 @@ pub async fn translate_with_gpt(app: &AppHandle, original: &str) -> Result<Strin
                 }
             ],
             "max_tokens": 300,
-            "temperature": 0.9,
-            "top_p": 0.7,
+            "temperature": 0.3,
+            "top_p": 0.3,
             "n": 1,
-            "stream": false,
-            "presence_penalty": 0.3,
-            "frequency_penalty": -0.3
+            "stream": false
         })
     };
 

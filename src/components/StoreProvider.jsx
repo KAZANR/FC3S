@@ -6,19 +6,31 @@ const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
     const [store, setStore] = useState(null);
+    const [scenesStore, setScenesStore] = useState(null);
     const [settings, setSettings] = useState(null);
+    const [scenes, setScenes] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const initStore = async () => {
             try {
-                const storeInstance = await load('store.json', {
+                const settingsStoreInstance = await load('settings.json', {
                     autoSave: 100
                 });
-                setStore(storeInstance);
-                const storedSettings = await storeInstance.get('settings');
+                const scenesStoreInstance = await load('scenes.json', {
+                    autoSave: 100
+                });
+                setStore(settingsStoreInstance);
+                setScenesStore(scenesStoreInstance);
+                
+                const storedSettings = await settingsStoreInstance.get('settings');
                 if (storedSettings) {
                     setSettings(storedSettings);
+                }
+                
+                const storedScenes = await scenesStoreInstance.get('scenes');
+                if (storedScenes) {
+                    setScenes(storedScenes);
                 }
             } catch (error) {
                 console.error('初始化 store 失败:', error);
@@ -44,48 +56,26 @@ export function StoreProvider({ children }) {
         }
     };
 
-    const addOrUpdatePhrase = async (phrase) => {
-        await invoke('add_or_update_phrase', { phrase });
-        const storedSettings = await store.get('settings');
-        if (storedSettings) setSettings(storedSettings);
-    };
-
-    const deletePhrase = async (phraseId) => {
-        await invoke('delete_phrase', { phrase_id: phraseId });
-        const storedSettings = await store.get('settings');
-        if (storedSettings) setSettings(storedSettings);
-    };
-
-    const getNextPhraseId = async () => {
-        return await invoke('get_next_phrase_id');
-    };
-
-    const updatePhraseHotkey = async (phraseId, hotkey) => {
-        await invoke('update_phrase_hotkey', { phrase_id: phraseId, hotkey });
-        const storedSettings = await store.get('settings');
-        if (storedSettings) setSettings(storedSettings);
-    };
-
-    const getCustomScenes = async () => {
-        return await invoke('get_custom_scenes');
-    };
-
-    const updateCustomScenes = async (scenes) => {
-        await invoke('update_custom_scenes', { scenes });
+    const updateScenes = async (newScenes) => {
+        if (!scenesStore) return;
+        try {
+            await scenesStore.set('scenes', newScenes);
+            await scenesStore.save();
+            setScenes(newScenes);
+        } catch (error) {
+            console.error('更新场景失败:', error);
+        }
     };
 
     return (
         <StoreContext.Provider value={{
             store,
+            scenesStore,
             settings,
+            scenes,
             updateSettings,
-            loading,
-            addOrUpdatePhrase,
-            deletePhrase,
-            getNextPhraseId,
-            updatePhraseHotkey,
-            getCustomScenes,
-            updateCustomScenes
+            updateScenes,
+            loading
         }}>
             {children}
         </StoreContext.Provider>
