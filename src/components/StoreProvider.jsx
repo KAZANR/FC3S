@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { load } from '@tauri-apps/plugin-store';
+import { invoke } from '@tauri-apps/api/core';
 
 const StoreContext = createContext(null);
 
@@ -15,7 +16,6 @@ export function StoreProvider({ children }) {
                     autoSave: 100
                 });
                 setStore(storeInstance);
-                // 获取存储的设置，如果没有则使用默认值
                 const storedSettings = await storeInstance.get('settings');
                 if (storedSettings) {
                     setSettings(storedSettings);
@@ -31,7 +31,6 @@ export function StoreProvider({ children }) {
 
     const updateSettings = async (newSettings) => {
         if (!store) return;
-        // 合并设置
         const updatedSettings = { ...settings, ...newSettings };
         try {
             await store.set('settings', updatedSettings);
@@ -45,8 +44,49 @@ export function StoreProvider({ children }) {
         }
     };
 
+    const addOrUpdatePhrase = async (phrase) => {
+        await invoke('add_or_update_phrase', { phrase });
+        const storedSettings = await store.get('settings');
+        if (storedSettings) setSettings(storedSettings);
+    };
+
+    const deletePhrase = async (phraseId) => {
+        await invoke('delete_phrase', { phrase_id: phraseId });
+        const storedSettings = await store.get('settings');
+        if (storedSettings) setSettings(storedSettings);
+    };
+
+    const getNextPhraseId = async () => {
+        return await invoke('get_next_phrase_id');
+    };
+
+    const updatePhraseHotkey = async (phraseId, hotkey) => {
+        await invoke('update_phrase_hotkey', { phrase_id: phraseId, hotkey });
+        const storedSettings = await store.get('settings');
+        if (storedSettings) setSettings(storedSettings);
+    };
+
+    const getCustomScenes = async () => {
+        return await invoke('get_custom_scenes');
+    };
+
+    const updateCustomScenes = async (scenes) => {
+        await invoke('update_custom_scenes', { scenes });
+    };
+
     return (
-        <StoreContext.Provider value={{ store, settings, updateSettings, loading }}>
+        <StoreContext.Provider value={{
+            store,
+            settings,
+            updateSettings,
+            loading,
+            addOrUpdatePhrase,
+            deletePhrase,
+            getNextPhraseId,
+            updatePhraseHotkey,
+            getCustomScenes,
+            updateCustomScenes
+        }}>
             {children}
         </StoreContext.Provider>
     );

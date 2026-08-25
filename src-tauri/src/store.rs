@@ -142,3 +142,63 @@ pub fn update_settings_field<T: serde::Serialize>(
 
     Ok(result)
 }
+
+// 新增：添加/更新常用语
+pub fn update_phrase(app: &AppHandle, phrase: Phrase) -> Result<(), anyhow::Error> {
+    update_settings_field(app, |settings| {
+        if let Some(idx) = settings.phrases.iter().position(|p| p.id == phrase.id) {
+            settings.phrases[idx] = phrase;
+        } else {
+            settings.phrases.push(phrase);
+        }
+    })?;
+    // 重新注册快捷键
+    crate::shortcut::init_shortcuts(app)?;
+    Ok(())
+}
+
+// 新增：删除常用语
+pub fn delete_phrase(app: &AppHandle, phrase_id: i32) -> Result<(), anyhow::Error> {
+    update_settings_field(app, |settings| {
+        settings.phrases.retain(|p| p.id != phrase_id);
+    })?;
+    crate::shortcut::init_shortcuts(app)?;
+    Ok(())
+}
+
+// 新增：获取下一个可用的 phrase ID
+pub fn get_next_phrase_id(app: &AppHandle) -> Result<i32, anyhow::Error> {
+    let settings = get_settings(app)?;
+    let max_id = settings.phrases.iter().map(|p| p.id).max().unwrap_or(0);
+    Ok(max_id + 1)
+}
+
+// 新增：更新自定义游戏场景列表
+pub fn update_custom_scenes(app: &AppHandle, scenes: Vec<(String, String)>) -> Result<(), anyhow::Error> {
+    // 存储自定义场景到单独的键
+    let store = app.store(STORE_FILENAME)?;
+    store.set("custom_scenes", json!(scenes));
+    store.save()?;
+    Ok(())
+}
+
+// 新增：获取自定义游戏场景
+pub fn get_custom_scenes(app: &AppHandle) -> Result<Vec<(String, String)>, anyhow::Error> {
+    let store = app.store(STORE_FILENAME)?;
+    let scenes: Vec<(String, String)> = store
+        .get("custom_scenes")
+        .map(|v| serde_json::from_value(v).unwrap_or_default())
+        .unwrap_or_default();
+    Ok(scenes)
+}
+
+// 新增：更新短语快捷键
+pub fn update_phrase_hotkey(app: &AppHandle, phrase_id: i32, hotkey: HotkeyConfig) -> Result<(), anyhow::Error> {
+    update_settings_field(app, |settings| {
+        if let Some(idx) = settings.phrases.iter().position(|p| p.id == phrase_id) {
+            settings.phrases[idx].hotkey = hotkey;
+        }
+    })?;
+    crate::shortcut::init_shortcuts(app)?;
+    Ok(())
+}

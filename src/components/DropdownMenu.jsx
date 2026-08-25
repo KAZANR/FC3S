@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckTick } from '../icons';
+import { CheckTick, Plus } from '../icons';
 import { twMerge } from 'tailwind-merge';
 
 export default function DropdownMenu({
@@ -10,7 +10,9 @@ export default function DropdownMenu({
     onSelect,
     anchorPosition = 'left-0',
     className = '',
-    renderOption
+    renderOption,
+    customOptions = [],
+    onCustomClick
 }) {
     return show && (
         <>
@@ -47,6 +49,42 @@ export default function DropdownMenu({
                         </button>
                     );
                 })}
+
+                {customOptions.length > 0 && (
+                    <>
+                        <div className="border-t border-zinc-200 my-1" />
+                        {customOptions.map(([value, label]) => {
+                            const isActive = value === currentValue;
+                            return (
+                                <button
+                                    key={value}
+                                    className={twMerge(
+                                        'w-full flex items-center px-3.5 py-2.5 text-[14px] relative rounded-lg',
+                                        isActive
+                                            ? 'text-[#1a1a1a] font-semibold bg-white'
+                                            : 'text-[#1a1a1a] hover:bg-zinc-100'
+                                    )}
+                                    onClick={() => onSelect(value)}
+                                >
+                                    {label}
+                                    {isActive && (
+                                        <CheckTick className="w-6 h-6 ml-auto stroke-[#1a1a1a]" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
+
+                {onCustomClick && (
+                    <button
+                        onClick={onCustomClick}
+                        className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 text-[14px] text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors mt-1"
+                    >
+                        <Plus className="w-5 h-5" />
+                        <span>添加自定义场景</span>
+                    </button>
+                )}
             </motion.div>
         </>
     );
