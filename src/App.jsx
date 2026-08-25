@@ -5,7 +5,6 @@ import Translate from "./pages/Translate";
 import User from "./pages/User";
 import Settings from "./pages/Settings";
 import About from "./pages/About";
-import Mana from "./pages/Mana";
 import Phrases from "./pages/Phrases";
 
 const pages = {
@@ -14,7 +13,6 @@ const pages = {
   user: User,
   settings: Settings,
   about: About,
-  mana: Mana,
   phrases: Phrases
 };
 

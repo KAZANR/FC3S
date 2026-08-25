@@ -7,7 +7,6 @@ import {
   Translate,
   UserUser01,
   InfoCircle,
-  GodlyWebsite,
 } from '../icons';
 import appIcon from '../assets/app-icon.png';
 // import LoginModal from './LoginModal';
@@ -16,7 +15,6 @@ const sidebarItems = [
   { name: '主页', icon: HomeHLine, id: 'home' },
   { name: '模式', icon: Translate, id: 'translate' },
   { name: '常用语', icon: InfoCircle, id: 'phrases' },
-  { name: '能量', icon: GodlyWebsite, id: 'mana' },
   { name: 'AI模型', icon: Settings02, id: 'settings' },
   { name: '关于', icon: InfoCircle, id: 'about' },
 ];
