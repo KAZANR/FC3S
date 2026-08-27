@@ -55,6 +55,11 @@ const MODEL_OPTIONS = [
         modelName: 'deepseek-reasoner'
     },
     {
+        id: 'siliconflow',
+        name: '硅基流动免费',
+        modelName: 'Qwen2-7B-Instruct'
+    },
+    {
         id: 'stepfun',
         name: '阶跃星辰',
         modelName: 'step-2-16k'
@@ -120,10 +125,16 @@ export default function Settings() {
                                         <Cube className="w-3.5 h-3.5 stroke-zinc-500" />
                                         <span className="text-xs text-zinc-500">{model.modelName}</span>
                                     </div>
-                                    {model.id.includes('deepseek') && (
+                                    {(model.id === 'siliconflow' || model.id.includes('deepseek')) && (
                                         <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 rounded-md">
                                             <Sparkles className="w-3.5 h-3.5 stroke-blue-500" />
                                             <span className="text-xs text-blue-500">硅基流动</span>
+                                        </div>
+                                    )}
+                                    {model.id === 'siliconflow' && (
+                                        <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 dark:bg-green-900/20 rounded-md">
+                                            <Sparkles className="w-3.5 h-3.5 stroke-green-500" />
+                                            <span className="text-xs text-green-500">免费</span>
                                         </div>
                                     )}
                                 </div>
