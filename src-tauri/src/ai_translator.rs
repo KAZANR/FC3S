@@ -159,25 +159,10 @@ fn get_system_prompt(from: &str, to: &str, scene_prompt: &str, mode: &str, daily
 
 fn get_model_config(settings: &crate::store::AppSettings) -> crate::store::ModelConfig {
     match settings.model_type.as_str() {
-        "deepseek" => crate::store::ModelConfig {
-            auth: "sk-jleighwqdtyssxeycgmwxqrhbofpsbkhtobofxhbeyebupyh".to_string(),
-            api_url: "https://api.siliconflow.cn/v1/chat/completions".to_string(),
-            model_name: "deepseek-ai/DeepSeek-V3".to_string(),
-        },
-        "deepseek-R1" => crate::store::ModelConfig {
-            auth: "sk-jleighwqdtyssxeycgmwxqrhbofpsbkhtobofxhbeyebupyh".to_string(),
-            api_url: "https://api.siliconflow.cn/v1/chat/completions".to_string(),
-            model_name: "deepseek-ai/DeepSeek-R1".to_string(),
-        },
         "siliconflow" => crate::store::ModelConfig {
             auth: "sk-jleighwqdtyssxeycgmwxqrhbofpsbkhtobofxhbeyebupyh".to_string(),
             api_url: "https://api.siliconflow.cn/v1/chat/completions".to_string(),
             model_name: "Qwen/Qwen2-7B-Instruct".to_string(),
-        },
-        "stepfun" => crate::store::ModelConfig {
-            auth: "605JU1zU7cGmFp0ibbZlZZ3Qra3lRH7FDtpvICyf2pTrRrUaO6CQgW8p3sQatd5Wh".to_string(),
-            api_url: "https://api.stepfun.com/v1/chat/completions".to_string(),
-            model_name: "step-2-16k".to_string(),
         },
         "custom" => settings.custom_model.clone(),
         _ => settings.custom_model.clone(),
@@ -221,41 +206,24 @@ pub async fn translate_with_gpt(app: &AppHandle, original: &str) -> Result<Strin
         .connect_timeout(std::time::Duration::from_secs(10))
         .build()?;
 
-    let request_body = if settings.model_type == "deepseek-R1" {
-        json!({
-            "model": model_config.model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": original
-                }
-            ],
-            "max_tokens": 8000
-        })
-    } else {
-        json!({
-            "model": model_config.model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": original
-                }
-            ],
-            "max_tokens": 300,
-            "temperature": 0.3,
-            "top_p": 0.3,
-            "n": 1,
-            "stream": false
-        })
-    };
+    let request_body = json!({
+        "model": model_config.model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": system_prompt
+            },
+            {
+                "role": "user",
+                "content": original
+            }
+        ],
+        "max_tokens": 300,
+        "temperature": 0.3,
+        "top_p": 0.3,
+        "n": 1,
+        "stream": false
+    });
 
     let response = match client
         .post(&model_config.api_url)
